@@ -1,14 +1,10 @@
-// components/Spreadsheet.tsx
 "use client";
 
 import { useState } from 'react';
-import {
-  useReactTable,
-  getCoreRowModel,
-  ColumnDef,
-} from '@tanstack/react-table';
+import { useReactTable, getCoreRowModel, ColumnDef } from '@tanstack/react-table';
 import { Row } from '../lib/types';
 import { EditableCell } from './EditableCell';
+import { isFormula, evaluateExpression } from '../utils/formula';
 
 const columns: ColumnDef<Row>[] = Array.from({ length: 5 }, (_, i) => ({
   accessorKey: `col${i + 1}`,
@@ -41,12 +37,12 @@ export function Spreadsheet() {
   }
 
   return (
-    <table className="min-w-full table-auto border-collapse">
+    <table className="min-w-full table-fixed border-collapse">
       <thead>
         {table.getHeaderGroups().map((headerGroup) => (
           <tr key={headerGroup.id}>
             {headerGroup.headers.map((header) => (
-              <th key={header.id} className="border px-2 py-1 text-left">
+              <th key={header.id} className="border px-2 py-1 text-left w-24">
                 {header.isPlaceholder ? null : header.column.columnDef.header}
               </th>
             ))}
@@ -56,14 +52,25 @@ export function Spreadsheet() {
       <tbody>
         {table.getRowModel().rows.map((row) => (
           <tr key={row.id}>
-            {row.getVisibleCells().map((cell) => (
-              <td key={cell.id} className="border px-2 py-1">
-                <EditableCell
-                  value={cell.getValue() as string | number}
-                  onChange={(value) => handleCellChange(row.index, cell.column.id, value)}
-                />
-              </td>
-            ))}
+            {row.getVisibleCells().map((cell) => {
+              const rawValue = cell.getValue() as string;
+              const result = isFormula(rawValue) ? evaluateExpression(rawValue) : rawValue;
+              const displayValue =
+                typeof result === 'number'
+                  ? Number.isNaN(result)
+                    ? 'Error'
+                    : String(result)
+                  : result;
+              return (
+                <td key={cell.id} className="border px-2 py-1 w-24 h-8 overflow-hidden">
+                  <EditableCell
+                    rawValue={rawValue}
+                    displayValue={displayValue}
+                    onChange={(value) => handleCellChange(row.index, cell.column.id, value)}
+                  />
+                </td>
+              );
+            })}
           </tr>
         ))}
       </tbody>

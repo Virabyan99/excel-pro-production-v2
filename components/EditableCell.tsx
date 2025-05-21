@@ -1,16 +1,17 @@
-// components/EditableCell.tsx
+"use client";
 import { useState, useRef, useEffect } from 'react';
 import { CellSchema } from '@/schemas/cell';
 import { Input } from './ui/input';
 
 interface EditableCellProps {
-  value: string | number;
+  rawValue: string;
+  displayValue: string;
   onChange: (value: string) => void;
 }
 
-export function EditableCell({ value, onChange }: EditableCellProps) {
+export function EditableCell({ rawValue, displayValue, onChange }: EditableCellProps) {
   const [isEditing, setIsEditing] = useState(false);
-  const [draft, setDraft] = useState(String(value));
+  const [draft, setDraft] = useState(rawValue);
   const [error, setError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -20,13 +21,19 @@ export function EditableCell({ value, onChange }: EditableCellProps) {
     }
   }, [isEditing]);
 
+  useEffect(() => {
+    setDraft(rawValue);
+  }, [rawValue]);
+
   function validate(value: string) {
     try {
       CellSchema.parse(value);
       setError(null);
       return true;
     } catch (e: any) {
-      setError(e.errors?.[0]?.message ?? 'Invalid input');
+      const message = e.errors?.[0]?.message ?? 'Invalid input';
+      console.error(message);
+      setError(message);
       return false;
     }
   }
@@ -39,27 +46,30 @@ export function EditableCell({ value, onChange }: EditableCellProps) {
   }
 
   return (
-    <div className="relative">
+    <div
+      className="w-full h-full"
+      onClick={() => {
+        if (!isEditing) {
+          setIsEditing(true);
+        }
+      }}
+    >
       {isEditing ? (
-        <>
-          <Input
-            ref={inputRef}
-            value={draft}
-            onChange={(e) => {
-              setDraft(e.target.value);
-              validate(e.target.value);
-            }}
-            onBlur={commit}
-            onKeyDown={(e) => e.key === 'Enter' && commit()}
-            className={error ? 'border-red-500' : ''}
-          />
-          {error && (
-            <p className="text-red-500 text-sm mt-1">{error}</p>
-          )}
-        </>
+        <Input
+          ref={inputRef}
+          value={draft}
+          onChange={(e) => {
+            setDraft(e.target.value);
+            validate(e.target.value);
+          }}
+          onBlur={commit}
+          onKeyDown={(e) => e.key === 'Enter' && commit()}
+          className={`w-full h-full ${error ? 'border-red-500' : ''}`}
+          onClick={(e) => e.stopPropagation()} // Prevent click from bubbling to outer div
+        />
       ) : (
-        <div onClick={() => setIsEditing(true)} className="px-2 py-1">
-          {value}
+        <div className="w-full h-full px-2 py-1 truncate">
+          {displayValue}
         </div>
       )}
     </div>

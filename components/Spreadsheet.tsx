@@ -6,10 +6,13 @@ import { Row } from '../lib/types';
 import { EditableCell } from './EditableCell';
 import { isFormula, evaluateExpression } from '../utils/formula';
 
-const columns: ColumnDef<Row>[] = Array.from({ length: 5 }, (_, i) => ({
-  accessorKey: `col${i + 1}`,
-  header: `Col ${i + 1}`,
-}));
+const columns: ColumnDef<Row>[] = Array.from({ length: 5 }, (_, i) => {
+  const letter = String.fromCharCode(65 + i); // A, B, C, D, E
+  return {
+    accessorKey: letter,
+    header: letter,
+  };
+});
 
 const initialData: Row[] = Array.from({ length: 5 }).map(() => {
   const row: Row = {};
@@ -54,7 +57,7 @@ export function Spreadsheet() {
           <tr key={row.id}>
             {row.getVisibleCells().map((cell) => {
               const rawValue = cell.getValue() as string;
-              const result = isFormula(rawValue) ? evaluateExpression(rawValue) : rawValue;
+              const result = isFormula(rawValue) ? evaluateExpression(rawValue, data) : rawValue;
               const displayValue =
                 typeof result === 'number'
                   ? Number.isNaN(result)

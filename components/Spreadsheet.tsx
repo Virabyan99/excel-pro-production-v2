@@ -1,4 +1,3 @@
-// components/Spreadsheet.tsx
 "use client";
 
 import { useState } from 'react';
@@ -12,6 +11,7 @@ const columns: ColumnDef<Row>[] = Array.from({ length: 5 }, (_, i) => {
   return {
     accessorKey: letter,
     header: letter,
+    enableResizing: true, // Enable resizing
   };
 });
 
@@ -25,13 +25,35 @@ const initialData: Row[] = Array.from({ length: 5 }).map(() => {
 
 export function Spreadsheet() {
   const [data, setData] = useState(initialData);
+  const [columnOrder, setColumnOrder] = useState<string[]>(columns.map(c => c.accessorKey as string));
 
   const table = useReactTable({
     data,
     columns,
     getCoreRowModel: getCoreRowModel(),
+    enableColumnResizing: true, // Enable resizing
+    columnResizeMode: 'onChange', // Resize mode
+    enableColumnOrdering: true, // Enable ordering
+    state: { columnOrder }, // Manage column order
+    onColumnOrderChange: setColumnOrder, // Update order state
   });
 
+  // Drag-and-drop handlers
+  function handleDragStart(e: React.DragEvent, headerId: string) {
+    e.dataTransfer.setData('headerId', headerId);
+  }
+
+  function handleDrop(e: React.DragEvent, headerId: string) {
+    const from = e.dataTransfer.getData('headerId');
+    const newOrder = [...columnOrder];
+    const fromIdx = newOrder.indexOf(from);
+    const toIdx = newOrder.indexOf(headerId);
+    newOrder.splice(fromIdx, 1);
+    newOrder.splice(toIdx, 0, from);
+    setColumnOrder(newOrder);
+  }
+
+  // Handle cell edits
   function handleCellChange(rowIndex: number, columnId: string, value: string) {
     setData((prevData) => {
       const newData = [...prevData];
@@ -40,6 +62,7 @@ export function Spreadsheet() {
     });
   }
 
+  // Evaluate formulas
   function getDisplayValue(rawValue: string, data: Row[]): string {
     if (isFormula(rawValue)) {
       try {
@@ -59,8 +82,23 @@ export function Spreadsheet() {
         {table.getHeaderGroups().map((headerGroup) => (
           <tr key={headerGroup.id}>
             {headerGroup.headers.map((header) => (
-              <th key={header.id} className="border px-2 py-1 text-left w-24">
+              <th
+                key={header.id}
+                draggable
+                onDragStart={(e) => handleDragStart(e, header.id)}
+                onDragOver={(e) => e.preventDefault()}
+                onDrop={(e) => handleDrop(e, header.id)}
+                style={{ width: header.getSize() }} // Dynamic width
+                className="border px-2 py-1 text-left relative"
+              >
                 {header.isPlaceholder ? null : header.column.columnDef.header}
+                <div
+                  {...{
+                    onMouseDown: header.getResizeHandler(),
+                    onTouchStart: header.getResizeHandler(),
+                  }}
+                  className="absolute right-0 top-0 h-full w-1 cursor-col-resize bg-transparent hover:bg-gray-200"
+                />
               </th>
             ))}
           </tr>

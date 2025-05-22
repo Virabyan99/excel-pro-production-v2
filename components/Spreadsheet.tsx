@@ -1,3 +1,4 @@
+// components/Spreadsheet.tsx
 "use client";
 
 import { useState } from 'react';
@@ -39,6 +40,19 @@ export function Spreadsheet() {
     });
   }
 
+  function getDisplayValue(rawValue: string, data: Row[]): string {
+    if (isFormula(rawValue)) {
+      try {
+        const result = evaluateExpression(rawValue, data);
+        return isNaN(result) ? 'Error' : String(result);
+      } catch (err) {
+        console.error(err);
+        return 'Error';
+      }
+    }
+    return rawValue;
+  }
+
   return (
     <table className="min-w-full table-fixed border-collapse">
       <thead>
@@ -57,13 +71,7 @@ export function Spreadsheet() {
           <tr key={row.id}>
             {row.getVisibleCells().map((cell) => {
               const rawValue = cell.getValue() as string;
-              const result = isFormula(rawValue) ? evaluateExpression(rawValue, data) : rawValue;
-              const displayValue =
-                typeof result === 'number'
-                  ? Number.isNaN(result)
-                    ? 'Error'
-                    : String(result)
-                  : result;
+              const displayValue = getDisplayValue(rawValue, data);
               return (
                 <td key={cell.id} className="border px-2 py-1 w-24 h-8 overflow-hidden">
                   <EditableCell

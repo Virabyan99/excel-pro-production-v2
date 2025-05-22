@@ -11,7 +11,7 @@ interface EditableCellProps {
 
 export function EditableCell({ rawValue, displayValue, onChange }: EditableCellProps) {
   const [isEditing, setIsEditing] = useState(false);
-  const [draft, setDraft] = useState(rawValue);
+  const [draft, setDraft] = useState(rawValue ?? ''); // Fallback to empty string
   const [error, setError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 

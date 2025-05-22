@@ -33,7 +33,6 @@ export function Spreadsheet() {
   const [grouping, setGrouping] = useState<string[]>([]);
   const [isMounted, setIsMounted] = useState(false);
 
-  // Set isMounted to true after the component mounts
   useEffect(() => {
     setIsMounted(true);
   }, []);
@@ -53,9 +52,8 @@ export function Spreadsheet() {
     onGroupingChange: setGrouping,
   });
 
-  // Render nothing (or a loading state) until mounted
   if (!isMounted) {
-    return null; // Optionally, return <div>Loading...</div>
+    return null;
   }
 
   function handleDragStart(e: React.DragEvent, headerId: string) {
@@ -80,21 +78,21 @@ export function Spreadsheet() {
     });
   }
 
- function getDisplayValue(rawValue: string | undefined, data: Row[]): string {
-  if (rawValue === undefined) {
-    return ''; // Handle undefined values gracefully
-  }
-  if (isFormula(rawValue)) {
-    try {
-      const result = evaluateExpression(rawValue, data);
-      return isNaN(result) ? 'Error' : String(result);
-    } catch (err) {
-      console.error(err);
-      return 'Error';
+  function getDisplayValue(rawValue: string | undefined, data: Row[]): string {
+    if (rawValue === undefined) {
+      return '';
     }
+    if (isFormula(rawValue)) {
+      try {
+        const result = evaluateExpression(rawValue, data);
+        return isNaN(result) ? 'Error' : String(result);
+      } catch (err) {
+        console.error(err);
+        return 'Error';
+      }
+    }
+    return rawValue;
   }
-  return rawValue;
-}
 
   return (
     <div>
@@ -111,74 +109,93 @@ export function Spreadsheet() {
         ))}
       </select>
 
-      <table className="min-w-full table-fixed border-collapse">
-        <thead>
-          <tr>
-            {table.getHeaderGroups()[0].headers.map(header => (
-              <th key={header.id}>
-                {header.column.getCanFilter() ? (
-                  <Input
-                    placeholder="Filter..."
-                    value={(header.column.getFilterValue() as string) ?? ''}
-                    onChange={e => header.column.setFilterValue(e.target.value)}
-                    className="w-full"
-                  />
-                ) : null}
-              </th>
-            ))}
-          </tr>
-          {table.getHeaderGroups().map((headerGroup) => (
-            <tr key={headerGroup.id}>
-              {headerGroup.headers.map((header) => (
+      <div className="overflow-auto h-[400px]">
+        <table className="min-w-full table-fixed border-collapse">
+          <thead>
+            <tr>
+              {table.getHeaderGroups()[0].headers.map((header, idx) => (
                 <th
                   key={header.id}
-                  draggable
-                  onDragStart={(e) => handleDragStart(e, header.id)}
-                  onDragOver={(e) => e.preventDefault()}
-                  onDrop={(e) => handleDrop(e, header.id)}
-                  style={{ width: header.getSize() }}
-                  className="border px-2 py-1 text-left relative cursor-pointer select-none"
-                  onClick={header.column.getToggleSortingHandler()}
+                  className={`
+                    border px-2 py-1
+                    sticky top-0 bg-gray-100 shadow-md z-20
+                    ${idx === 0 ? 'left-0 z-30' : ''}
+                  `}
                 >
-                  <div className="flex items-center space-x-1">
-                    <span>{header.isPlaceholder ? null : header.column.columnDef.header}</span>
-                    {{
-                      asc: ' 🔼',
-                      desc: ' 🔽',
-                    }[header.column.getIsSorted() as string] || null}
-                  </div>
-                  <div
-                    {...{
-                      onMouseDown: header.getResizeHandler(),
-                      onTouchStart: header.getResizeHandler(),
-                    }}
-                    className="absolute right-0 top-0 h-full w-1 cursor-col-resize bg-transparent hover:bg-gray-200"
-                  />
+                  {header.column.getCanFilter() ? (
+                    <Input
+                      placeholder="Filter..."
+                      value={(header.column.getFilterValue() as string) ?? ''}
+                      onChange={e => header.column.setFilterValue(e.target.value)}
+                      className="w-full"
+                    />
+                  ) : null}
                 </th>
               ))}
             </tr>
-          ))}
-        </thead>
-        <tbody>
-          {table.getRowModel().rows.map((row) => (
-            <tr key={row.id}>
-              {row.getVisibleCells().map((cell) => {
-                const rawValue = cell.getValue() as string;
-                const displayValue = getDisplayValue(rawValue, data);
-                return (
-                  <td key={cell.id} className="border px-2 py-1 w-24 h-8 overflow-hidden">
-                    <EditableCell
-                      rawValue={rawValue}
-                      displayValue={displayValue}
-                      onChange={(value) => handleCellChange(row.index, cell.column.id, value)}
+            {table.getHeaderGroups().map((headerGroup) => (
+              <tr key={headerGroup.id}>
+                {headerGroup.headers.map((header, idx) => (
+                  <th
+                    key={header.id}
+                    draggable
+                    onDragStart={(e) => handleDragStart(e, header.id)}
+                    onDragOver={(e) => e.preventDefault()}
+                    onDrop={(e) => handleDrop(e, header.id)}
+                    style={{ width: header.getSize() }}
+                    className={`
+                      border px-2 py-1 text-left relative cursor-pointer select-none
+                      sticky top-0 bg-gray-100 shadow-md z-20
+                      ${idx === 0 ? 'left-0 z-30' : ''}
+                    `}
+                    onClick={header.column.getToggleSortingHandler()}
+                  >
+                    <div className="flex items-center space-x-1">
+                      <span>{header.isPlaceholder ? null : header.column.columnDef.header}</span>
+                      {{
+                        asc: ' 🔼',
+                        desc: ' 🔽',
+                      }[header.column.getIsSorted() as string] || null}
+                    </div>
+                    <div
+                      {...{
+                        onMouseDown: header.getResizeHandler(),
+                        onTouchStart: header.getResizeHandler(),
+                      }}
+                      className="absolute right-0 top-0 h-full w-1 cursor-col-resize bg-transparent hover:bg-gray-200"
                     />
-                  </td>
-                );
-              })}
-            </tr>
-          ))}
-        </tbody>
-      </table>
+                  </th>
+                ))}
+              </tr>
+            ))}
+          </thead>
+          <tbody>
+            {table.getRowModel().rows.map((row) => (
+              <tr key={row.id}>
+                {row.getVisibleCells().map((cell, idx) => {
+                  const rawValue = cell.getValue() as string;
+                  const displayValue = getDisplayValue(rawValue, data);
+                  return (
+                    <td
+                      key={cell.id}
+                      className={`
+                        border px-2 py-1 w-24 h-8 overflow-hidden
+                        ${idx === 0 ? 'sticky left-0 bg-white shadow-md z-10' : ''}
+                      `}
+                    >
+                      <EditableCell
+                        rawValue={rawValue}
+                        displayValue={displayValue}
+                        onChange={(value) => handleCellChange(row.index, cell.column.id, value)}
+                      />
+                    </td>
+                  );
+                })}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }
